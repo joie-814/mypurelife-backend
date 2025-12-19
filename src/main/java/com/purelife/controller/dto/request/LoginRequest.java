@@ -7,7 +7,7 @@ import lombok.Data;
 public class LoginRequest {
     
     @NotBlank(message = "帳號不能為空")
-    private String account;
+    private String email;
     
     @NotBlank(message = "密碼不能為空")
     private String password;

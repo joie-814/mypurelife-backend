@@ -45,8 +45,15 @@ dependencies {
     // DevTools（開發期間自動重載）
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-    // Swagger 依賴（SpringDoc OpenAPI）
+    // Swagger（SpringDoc OpenAPI）
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    // Spring Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
 
     // Test

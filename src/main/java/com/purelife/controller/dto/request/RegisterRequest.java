@@ -12,16 +12,13 @@ import lombok.Data;
 @Data
 public class RegisterRequest {
     
-    @NotBlank(message = "帳號不能為空")//驗證規則，當 Controller 加上 @Valid 時，這些驗證規則才會被執行！
-    @Size(min = 4, max = 20, message = "帳號長度必須在 4-20 字元之間")
-    private String account;
+    @NotBlank(message = "姓名不能為空")
+    private String name;
     
     @NotBlank(message = "密碼不能為空")
     @Size(min = 8, message = "密碼長度至少 8 字元")
     private String password;
     
-    @NotBlank(message = "姓名不能為空")
-    private String name;
     
     @NotBlank(message = "Email 不能為空")
     @Email(message = "Email 格式不正確")

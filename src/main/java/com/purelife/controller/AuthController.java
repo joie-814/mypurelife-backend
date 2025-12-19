@@ -3,6 +3,7 @@ package com.purelife.controller;
 import com.purelife.controller.dto.request.LoginRequest;
 import com.purelife.controller.dto.request.RegisterRequest;
 import com.purelife.controller.dto.response.ApiResponse;
+import com.purelife.controller.dto.response.LoginResponse;
 import com.purelife.entity.Member;
 import com.purelife.service.AuthService;
 import jakarta.validation.Valid;
@@ -27,8 +28,8 @@ public class AuthController {
     }
     
     @PostMapping("/login")
-    public ApiResponse<Member> login(@Valid @RequestBody LoginRequest request) {
-        Member member = authService.login(request);
-        return ApiResponse.success("登入成功", member);
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse loginResponse = authService.login(request);
+        return ApiResponse.success("登入成功", loginResponse);
     }
 }
