@@ -56,7 +56,8 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-resources/**").permitAll()
                 
-                
+                // 訂單相關 API 需要登入
+                .requestMatchers("/api/orders/**").authenticated()
                 // 其他請求都需要登入
                 .anyRequest().authenticated()
             )
