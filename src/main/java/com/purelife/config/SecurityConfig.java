@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()           // 登入、註冊
                 .requestMatchers("/api/products/**").permitAll()       // 商品查詢
                 .requestMatchers("/api/faqs/**").permitAll()           // FAQ
-                .requestMatchers(HttpMethod.GET, "/api/**").permitAll() // 所有 GET 請求
+                .requestMatchers("/api/subscriptions/plans/**").permitAll()  // 訂閱方案公開查詢
                 // 購物車不需要登入也能使用
                 .requestMatchers("/api/cart/**").permitAll() 
                 
@@ -56,8 +56,12 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-resources/**").permitAll()
                 
+                // 會員相關 API 需要登入
+                .requestMatchers("/api/members/**").authenticated()
                 // 訂單相關 API 需要登入
                 .requestMatchers("/api/orders/**").authenticated()
+                // 其他訂閱操作需登入
+                .requestMatchers("/api/subscriptions/**").authenticated()    
                 // 其他請求都需要登入
                 .anyRequest().authenticated()
             )
