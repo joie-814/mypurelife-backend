@@ -32,7 +32,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // 啟用 CORS
-            .cors((cors -> {}) )
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()) )
             // 關閉 CSRF（因為用 JWT，不需要 CSRF）
             .csrf(AbstractHttpConfigurer::disable)
             
@@ -44,10 +44,14 @@ public class SecurityConfig {
             // 設定哪些路徑需要認證
             .authorizeHttpRequests(auth -> auth
                 // 公開的 API（不需要登入）
-                .requestMatchers("/api/auth/**").permitAll()           // 登入、註冊
+                .requestMatchers("/api/admin/login").permitAll()          
+                .requestMatchers("/api/auth/**").permitAll()  
                 .requestMatchers("/api/products/**").permitAll()       // 商品查詢
                 .requestMatchers("/api/faqs/**").permitAll()           // FAQ
                 .requestMatchers("/api/subscriptions/plans/**").permitAll()  // 訂閱方案公開查詢
+                // 靜態資源公開
+                .requestMatchers("/images/**").permitAll()             // 圖片公開
+                .requestMatchers("/uploads/**").permitAll() 
                 // 購物車不需要登入也能使用
                 .requestMatchers("/api/cart/**").permitAll() 
                 
@@ -61,9 +65,11 @@ public class SecurityConfig {
                 // 訂單相關 API 需要登入
                 .requestMatchers("/api/orders/**").authenticated()
                 // 其他訂閱操作需登入
-                .requestMatchers("/api/subscriptions/**").authenticated()    
+                .requestMatchers("/api/subscriptions/**").authenticated() 
+                // 管理員需要 ADMIN 角色
+                .requestMatchers("/api/admin/**").authenticated()
                 // 其他請求都需要登入
-                .anyRequest().authenticated()
+                .anyRequest().authenticated() 
             )
             
             // 加入 JWT 過濾器

@@ -24,4 +24,7 @@ public interface OrderRepository extends CrudRepository<Order, Integer> {
     @Query("SELECT * FROM orders WHERE order_id = :orderId AND member_id = :memberId")
     Optional<Order> findByOrderIdAndMemberId(@Param("orderId") Integer orderId, 
                                               @Param("memberId") Integer memberId);
+
+    // 查詢所有訂單
+    List<Order> findAllByOrderByOrderTimeDesc();
 }
