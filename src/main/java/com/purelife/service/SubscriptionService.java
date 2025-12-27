@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -60,6 +61,39 @@ public class SubscriptionService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    public SubscriptionPlanResponse getPlanById(Integer planId) {
+        Optional<SubscriptionPlan> planOpt = planRepository.findById(planId);
+        if (planOpt.isEmpty()) {
+            return null; // 找不到方案就回 null
+        }
+
+        SubscriptionPlan plan = planOpt.get();
+
+        Optional<Product> productOpt = productRepository.findById(plan.getProductId());
+        if (productOpt.isEmpty()) {
+            return null; // 找不到商品也回 null
+        }
+
+        Product product = productOpt.get();
+
+        BigDecimal basePrice = product.getPromotionPrice() != null
+                ? product.getPromotionPrice()
+                : product.getPrice();
+
+        BigDecimal subscriptionPrice = calculateSubscriptionPrice(basePrice, plan.getDiscountRate());
+
+        return SubscriptionPlanResponse.builder()
+                .planId(plan.getPlanId())
+                .productId(plan.getProductId())
+                .cycleType(plan.getCycleType())
+                .cycleDays(plan.getCycleDays())
+                .discountRate(plan.getDiscountRate())
+                .cycleText(getCycleText(plan.getCycleType()))
+                .originalPrice(basePrice)
+                .subscriptionPrice(subscriptionPrice)
+                .build();
     }
 
     /**

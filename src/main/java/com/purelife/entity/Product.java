@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Table("products")
@@ -47,10 +48,10 @@ public class Product {
     @Column("image_url")
     private String imageUrl;
 
+
     // 安全的 getter，避免 null 造成排序錯誤
     @Column("sales_count")
     private Integer salesCount;
-
         public Integer getSalesCount() {
         return salesCount != null ? salesCount : 0;
     }

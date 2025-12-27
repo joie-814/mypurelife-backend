@@ -1,9 +1,13 @@
 package com.purelife.service;
 
 import com.purelife.controller.dto.request.ProductRequest;
+import com.purelife.controller.dto.request.ProductRequest.SubscriptionPlanRequest;
 import com.purelife.controller.dto.response.ProductResponse;
 import com.purelife.entity.Product;
+import com.purelife.entity.SubscriptionPlan;
 import com.purelife.repository.ProductRepository;
+import com.purelife.repository.SubscriptionPlanRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,37 +28,34 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
-
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final FileUploadService fileUploadService;
 
+    // ===================== 查詢 =====================
     /**
-     * 取得所有商品（可選分類過濾）
+     * 取得所有商品（前台用）
      */
     public List<ProductResponse> getAllProducts(String category) {
         List<Product> products;
-        
-        if (category != null && !category.isEmpty()) {
-            products = productRepository.findByCategory(category);
+        if (category != null && !category.isBlank()) {
+            products = productRepository.findByCategory(category);  // 已過濾上架
         } else {
-            products = iterableToList(productRepository.findAll());
+            products = productRepository.findAllAvailable();  // 已過濾上架
         }
-        
         return products.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
     /**
-     * 取得所有商品（無過濾）
+     * 取得所有商品（後台用，包含下架）
      */
-    public List<ProductResponse> getAllProducts() {
-        List<Product> products = iterableToList(productRepository.findAll());
-        
+    public List<ProductResponse> getAllProductsForAdmin() {
+        List<Product> products = iterableToList(productRepository.findAllForAdmin());
         return products.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
-
     /**
      * 根據 ID 取得商品（回傳 ProductResponse）
      */
@@ -86,18 +87,12 @@ public class ProductService {
     }
 
     /**
-     * 取得新品（最近 10 個商品）
+     * 取得新品
      */
     public List<ProductResponse> getNewProducts() {
-        List<Product> products = iterableToList(productRepository.findAll());
+        List<Product> products = iterableToList(productRepository.findNewProducts());
         
         return products.stream()
-                // 處理 createdAt 可能為 null 的情況
-                .sorted(Comparator.comparing(
-                    Product::getCreatedAt, 
-                    Comparator.nullsLast(Comparator.reverseOrder())
-                ))
-                .limit(10)
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -106,16 +101,13 @@ public class ProductService {
      * 取得熱銷商品（依銷售量排序）
      */
     public List<ProductResponse> getHotProducts() {
-        List<Product> products = iterableToList(productRepository.findAll());
+        List<Product> products = iterableToList(productRepository.findHotProducts());
         
         return products.stream()
-                // 使用安全的 getter，getSalesCount() 已處理 null
-                .sorted(Comparator.comparing(Product::getSalesCount).reversed())
-                .limit(10)
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
-
+    // ===================== 新增 =====================
     /**
      * 新增商品（管理員用）
      */
@@ -129,21 +121,25 @@ public class ProductService {
         String description,
         String imageUrl,
         String productStatus,
-        MultipartFile file) {
+        List<SubscriptionPlanRequest> subscriptionPlans,
+        MultipartFile file){
 
         Product product = new Product();
         product.setProductName(productName);
         product.setCategory(category);
         product.setDescription(description);
 
+        // 圖片上傳
         if (file != null && !file.isEmpty()) {
             try {
                 String fileNewName = fileUploadService.uploadProductImage(file);
-                product.setImageUrl("/uploads/products/" + fileNewName);
+                product.setImageUrl(fileNewName);
             } catch (IOException e) {
                 throw new RuntimeException("圖片上傳失敗", e);
             }
-            }
+        } else if (imageUrl != null) {
+        product.setImageUrl(imageUrl);
+        }
         
         // 價格處理
         if (price != null) {
@@ -169,10 +165,28 @@ public class ProductService {
         
         // 銷售量初始化
         product.setSalesCount(0);
-        
-        return productRepository.save(product);
-    }
 
+        // 先存商品，取得 productId
+        Product savedProduct = productRepository.save(product);
+
+        // 如果有訂閱方案就存
+        if (subscriptionPlans != null && !subscriptionPlans.isEmpty()) {
+            List<SubscriptionPlan> plans = new ArrayList<>();
+            for (SubscriptionPlanRequest planReq : subscriptionPlans) {
+                SubscriptionPlan plan = new SubscriptionPlan();
+                plan.setCycleType(planReq.getCycleType());
+                plan.setCycleDays(planReq.getCycleDays());
+                plan.setDiscountRate(planReq.getDiscountRate()!= null 
+                    ? BigDecimal.valueOf(planReq.getDiscountRate()) 
+                    : null);
+                plan.setProductId(savedProduct.getProductId()); // 綁定關聯(綁定商品ID)
+                plans.add(plan);
+            }
+            subscriptionPlanRepository.saveAll(plans);
+        }
+        return savedProduct;
+    }
+    // ===================== 更新 =====================
     /**
      * 更新商品（管理員用）
      */
@@ -187,6 +201,7 @@ public class ProductService {
         String description,
         String imageUrl,
         String productStatus,
+        List<SubscriptionPlanRequest> subscriptionPlans,
         MultipartFile file) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("找不到商品，ID: " + productId));
@@ -222,6 +237,23 @@ public class ProductService {
         
         // 更新時間
         product.setUpdatedAt(LocalDateTime.now());
+        // 更新訂閱方案（先刪舊方案，再新增新方案）
+        if (subscriptionPlans != null) {
+            subscriptionPlanRepository.deleteByProductId(productId);
+
+            List<SubscriptionPlan> plans = new ArrayList<>();
+            for (SubscriptionPlanRequest planReq : subscriptionPlans) {
+                SubscriptionPlan plan = new SubscriptionPlan();
+                plan.setCycleType(planReq.getCycleType());
+                plan.setCycleDays(planReq.getCycleDays());
+                plan.setDiscountRate(planReq.getDiscountRate() != null
+                        ? BigDecimal.valueOf(planReq.getDiscountRate())
+                        : null);
+                plan.setProductId(product.getProductId());
+                plans.add(plan);
+            }
+            subscriptionPlanRepository.saveAll(plans);
+        }
 
         return productRepository.save(product);
     }
@@ -237,7 +269,7 @@ public class ProductService {
                 }
 
                 String newFileName = fileUploadService.uploadProductImage(file);
-                product.setImageUrl("/uploads/products/" + newFileName);
+                product.setImageUrl(newFileName);
                 return;
             }
 
@@ -252,7 +284,7 @@ public class ProductService {
             throw new RuntimeException("圖片更新失敗", e);
         }
     }
-
+     // ===================== 刪除 =====================
     /**
      * 刪除商品（管理員用）
      */
@@ -261,10 +293,13 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("找不到商品，ID: " + productId));
         
-        productRepository.delete(product);
+        // 軟刪除：改狀態而不是真的刪
+        product.setProductStatus("deleted");
+        product.setUpdatedAt(LocalDateTime.now());
+        productRepository.save(product);
     }
 
-    // ===== 輔助方法 =====
+    // ===================== 輔助方法 =====================
 
     /**
      * 將 Iterable 轉換為 List
@@ -288,7 +323,22 @@ public class ProductService {
         response.setStockQuantity(product.getStockQuantity());
         response.setDescription(product.getDescription());
         response.setImageUrl(product.getImageUrl());
-        response.setProductStatus(product.getProductStatus());  
+        response.setProductStatus(product.getProductStatus());
+        
+        List<SubscriptionPlan> plans = subscriptionPlanRepository.findByProductId(product.getProductId());
+        if (plans != null && !plans.isEmpty()) {
+            response.setSubscriptionPlans(
+                plans.stream().map(plan -> {
+                    ProductResponse.SubscriptionPlanResponse planRes =
+                            new ProductResponse.SubscriptionPlanResponse();
+                    planRes.setPlanId(plan.getPlanId());
+                    planRes.setCycleType(plan.getCycleType());
+                    planRes.setCycleDays(plan.getCycleDays());
+                    planRes.setDiscountRate(plan.getDiscountRate());
+                    return planRes;
+                }).collect(Collectors.toList())
+            );
+        }  
         return response;
     }
 }

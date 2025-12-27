@@ -73,9 +73,8 @@ public class FileUploadService {
         Path targetPath = Paths.get(uploadDir, "products", newFileName);
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-        // 儲存資料庫
-
-        return newFileName;
+        // 回傳圖片存取 URL（供資料庫與前端使用）
+        return "/uploads/products/" + newFileName;
     }
 
     /**

@@ -15,6 +15,10 @@ public interface ProductRepository extends CrudRepository<Product, Integer> {
     @Query("SELECT * FROM products WHERE product_status = 'available' ORDER BY product_id")
     List<Product> findAllAvailable();
 
+    // 後台用 - 顯示上架 + 下架，但不顯示已刪除
+    @Query("SELECT * FROM products WHERE product_status != 'deleted' ORDER BY product_id")
+    List<Product> findAllForAdmin();
+
     // 依分類查詢上架商品
     @Query("SELECT * FROM products WHERE product_status = 'available' AND category = :category ORDER BY product_id")
     List<Product> findByCategory(@Param("category") String category);

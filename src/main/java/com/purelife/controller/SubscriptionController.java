@@ -62,11 +62,27 @@ public class SubscriptionController {
     @GetMapping("/plans/{productId}")
     public ResponseEntity<ApiResponse<List<SubscriptionPlanResponse>>> getProductPlans(
             @PathVariable Integer productId) {
-
         List<SubscriptionPlanResponse> plans = subscriptionService.getProductPlans(productId);
+        if (plans == null || plans.isEmpty()) {
+        return ResponseEntity.status(404)
+                .body(ApiResponse.error("找不到該商品的訂閱方案"));
+        }
         return ResponseEntity.ok(ApiResponse.success(plans));
     }
 
+    @GetMapping("/plans/byPlanId/{planId}")
+    public ResponseEntity<ApiResponse<SubscriptionPlanResponse>> getPlanById(
+            @PathVariable Integer planId) {
+
+        SubscriptionPlanResponse plan = subscriptionService.getPlanById(planId);
+
+        if (plan == null) {
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.error("找不到該方案"));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(plan));
+    }
     /**
      * 建立訂閱
      */

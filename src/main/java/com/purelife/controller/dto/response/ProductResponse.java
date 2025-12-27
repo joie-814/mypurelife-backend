@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -22,4 +23,14 @@ public class ProductResponse {
     private Integer stockQuantity;
     private String productStatus;
     private String imageUrl;
+
+    // 定期購方案
+    private List<SubscriptionPlanResponse> subscriptionPlans;
+    @Data
+    public static class SubscriptionPlanResponse {
+        private Integer planId;
+        private String cycleType;
+        private Integer cycleDays;
+        private BigDecimal discountRate;
+    }
 }

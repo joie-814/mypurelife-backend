@@ -240,7 +240,7 @@ public class AdminService {
       
         // 更新圖片
         if (productData.getImageUrl() != null) {
-            product.setImageUrl("/Users/linchiehying/Desktop/商研院上課/專題/mypureLife/backend/uploads/products/" + productData.getImageUrl());
+            product.setImageUrl(productData.getImageUrl());
         }
     
         product.setUpdatedAt(LocalDateTime.now());
