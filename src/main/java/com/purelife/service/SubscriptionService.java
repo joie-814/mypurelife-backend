@@ -15,9 +15,13 @@ import com.purelife.controller.dto.request.CreateSubscriptionRequest;
 import com.purelife.controller.dto.response.SubscriptionPlanResponse;
 import com.purelife.controller.dto.response.SubscriptionResponse;
 import com.purelife.entity.MemberSubscription;
+import com.purelife.entity.Order;
+import com.purelife.entity.OrderItem;
 import com.purelife.entity.Product;
 import com.purelife.entity.SubscriptionPlan;
 import com.purelife.repository.MemberSubscriptionRepository;
+import com.purelife.repository.OrderItemRepository;
+import com.purelife.repository.OrderRepository;
 import com.purelife.repository.ProductRepository;
 import com.purelife.repository.SubscriptionPlanRepository;
 
@@ -30,6 +34,8 @@ public class SubscriptionService {
     private final SubscriptionPlanRepository planRepository;
     private final MemberSubscriptionRepository subscriptionRepository;
     private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     /**
      * 取得商品的訂閱方案
@@ -126,8 +132,61 @@ public class SubscriptionService {
         subscription.setCreatedAt(LocalDateTime.now());
 
         MemberSubscription saved = subscriptionRepository.save(subscription);
-
+        createFirstOrder(memberId, saved, plan, request);
         return convertToResponse(saved);
+    }
+
+    /**
+     * 建立首次訂單（立即出貨）
+     */
+    private void createFirstOrder(Integer memberId, MemberSubscription subscription, 
+                                    SubscriptionPlan plan, CreateSubscriptionRequest request) {
+        
+        Product product = productRepository.findById(plan.getProductId())
+                .orElseThrow(() -> new RuntimeException("商品不存在"));
+        
+        // 計算價格（含折扣）
+        BigDecimal unitPrice = product.getPromotionPrice() != null 
+                ? product.getPromotionPrice() 
+                : product.getPrice();
+        BigDecimal discountRate = BigDecimal.ONE.subtract(
+                plan.getDiscountRate().divide(new BigDecimal("100")));
+        BigDecimal finalPrice = unitPrice.multiply(discountRate);
+        BigDecimal subtotal = finalPrice.multiply(new BigDecimal(subscription.getQuantity()));
+        
+        // 建立訂單
+        Order order = new Order();
+        order.setMemberId(memberId);
+        order.setOrderNumber(generateOrderNumber());  // 產生訂單編號
+        order.setOrderStatus("pending");
+        order.setPaymentStatus("unpaid");
+        order.setTotalAmount(subtotal);
+        order.setShippingFee(BigDecimal.ZERO);  // 定期購免運費
+        order.setRecipientName(request.getRecipientName());
+        order.setRecipientPhone(request.getRecipientPhone());
+        order.setRecipientAddress(request.getRecipientAddress());
+        order.setPaymentMethod(request.getPaymentMethod());
+        order.setOrderTime(LocalDateTime.now());
+        
+        Order savedOrder = orderRepository.save(order);
+        
+        // 建立訂單明細
+        OrderItem item = new OrderItem();
+        item.setOrderId(savedOrder.getOrderId());
+        item.setProductId(plan.getProductId());
+        item.setSpecInfo("定期購首次出貨");
+        item.setQuantity(subscription.getQuantity());
+        item.setUnitPrice(finalPrice);
+        item.setSubtotal(subtotal);
+        
+        orderItemRepository.save(item);
+    }
+
+    /**
+     * 產生訂單編號
+     */
+    private String generateOrderNumber() {
+        return "SUB" + System.currentTimeMillis();
     }
 
     /**
