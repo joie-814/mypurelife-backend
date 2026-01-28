@@ -24,6 +24,7 @@ public class OrderResponse {
     private String paymentMethod;
     private LocalDateTime orderTime;
     private LocalDateTime shippingTime;
+    private String orderType;  // 訂單類型（一般訂單或訂閱訂單）
     private List<OrderItemResponse> items;
 
     @Data

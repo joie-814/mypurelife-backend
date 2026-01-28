@@ -151,9 +151,11 @@ public class SubscriptionService {
                 : product.getPrice();
         BigDecimal discountRate = BigDecimal.ONE.subtract(
                 plan.getDiscountRate().divide(new BigDecimal("100")));
-        BigDecimal finalPrice = unitPrice.multiply(discountRate);
-        BigDecimal subtotal = finalPrice.multiply(new BigDecimal(subscription.getQuantity()));
-        
+        BigDecimal finalPrice = unitPrice.multiply(discountRate)
+                .setScale(0, RoundingMode.HALF_UP);  // 四捨五入到整數
+        BigDecimal subtotal = finalPrice.multiply(new BigDecimal(subscription.getQuantity()))
+                .setScale(0, RoundingMode.HALF_UP);  // 四捨五入到整數
+
         // 建立訂單
         Order order = new Order();
         order.setMemberId(memberId);
@@ -167,6 +169,7 @@ public class SubscriptionService {
         order.setRecipientAddress(request.getRecipientAddress());
         order.setPaymentMethod(request.getPaymentMethod());
         order.setOrderTime(LocalDateTime.now());
+        order.setOrderType("subscription"); // 訂閱訂單
         
         Order savedOrder = orderRepository.save(order);
         

@@ -76,6 +76,7 @@ public class OrderService {
         order.setRecipientAddress(request.getRecipientAddress());
         order.setPaymentMethod(request.getPaymentMethod());
         order.setOrderTime(LocalDateTime.now());
+        order.setOrderType("normal"); // 一般訂單
 
         Order savedOrder = orderRepository.save(order);
 
@@ -167,6 +168,7 @@ public class OrderService {
                 .paymentMethod(order.getPaymentMethod())
                 .orderTime(order.getOrderTime())
                 .shippingTime(order.getShippingTime())
+                .orderType(order.getOrderType()) 
                 .items(itemResponses)
                 .build();
     }

@@ -52,4 +52,7 @@ public class Order {
 
     @Column("shipping_time")
     private LocalDateTime shippingTime;
+
+    @Column("order_type")
+    private String orderType;
 }
